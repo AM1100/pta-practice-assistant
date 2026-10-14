@@ -50,8 +50,8 @@ jobs:
             }
             if ($process.ExitCode -ne 0) { throw "Executable exited with $($process.ExitCode)" }
           }
-          Check-Exe @('--transport-check')
-          Check-Exe @('--screenshot', 'windows-gui.png')
+          Check-Exe -arguments @('--transport-check')
+          Check-Exe -arguments @('--screenshot', 'windows-gui.png')
           if (-not (Test-Path 'windows-gui.png')) { throw 'GUI screenshot was not created' }
       - name: Package portable ZIP
         shell: pwsh
