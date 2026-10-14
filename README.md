@@ -19,7 +19,9 @@
 
 ## 安装与运行
 
-需要 Python 3.10 或以上版本和桌面环境。
+Windows 10/11 x64 用户可从 [v1.2 Releases](https://github.com/AM1100/pta-practice-assistant/releases/tag/v1.2) 下载 `pta-practice-assistant-v1.2-windows-x86_64.zip`，解压整个文件夹后双击 `PTA-Assistant.exe`，无需安装 Python。保留 EXE 旁边的 `_internal` 目录。
+
+从源码运行需要 Python 3.10 或以上版本和桌面环境。
 
 ```bash
 git clone https://github.com/AM1100/pta-practice-assistant.git
@@ -76,7 +78,7 @@ pyinstaller --noconfirm --windowed --onedir --name PTA-Assistant app.py
 ./dist/PTA-Assistant/PTA-Assistant --transport-check
 ```
 
-Windows 的可执行文件需要在 Windows 上构建，本项目当前仅在 Linux x86_64 上验证打包。
+Windows 可执行程序由 GitHub Actions 的 Windows x64 环境构建，并经过回归测试、网络请求取消和 GUI 启动检查；Linux x86_64 包也已验证打包。Windows 构建可由维护者在 Actions 中手动运行 Build Windows v1.2。
 
 ## 第三方代码
 
