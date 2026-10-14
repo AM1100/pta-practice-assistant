@@ -1,0 +1,80 @@
+name: Build Windows v1.2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-v1.2
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    env:
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: '1'
+    steps:
+      - name: Check out released source
+        uses: actions/checkout@v4
+        with:
+          ref: v1.2
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: x64
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: Run regression tests
+        run: python test_app.py
+      - name: Check HTTP cancellation
+        run: python app.py --transport-check
+      - name: Build Windows executable
+        run: python -m PyInstaller --noconfirm --windowed --onedir --name PTA-Assistant app.py
+      - name: Verify frozen executable
+        shell: pwsh
+        run: |
+          $exe = Join-Path $PWD 'dist/PTA-Assistant/PTA-Assistant.exe'
+          function Check-Exe([string[]] $arguments) {
+            $process = Start-Process -FilePath $exe -ArgumentList $arguments -PassThru
+            if (-not $process.WaitForExit(60000)) {
+              Stop-Process -Id $process.Id -Force
+              throw 'Executable smoke check timed out'
+            }
+            if ($process.ExitCode -ne 0) { throw "Executable exited with $($process.ExitCode)" }
+          }
+          Check-Exe @('--transport-check')
+          Check-Exe @('--screenshot', 'windows-gui.png')
+          if (-not (Test-Path 'windows-gui.png')) { throw 'GUI screenshot was not created' }
+      - name: Package portable ZIP
+        shell: pwsh
+        run: |
+          Copy-Item README.md, THIRD_PARTY_LICENSE.txt, THIRD_PARTY_NOTICES.md -Destination dist/PTA-Assistant
+          Copy-Item -LiteralPath '使用说明.md' -Destination dist/PTA-Assistant
+          @'
+          Windows 10/11 x64: Extract the entire ZIP, then double-click PTA-Assistant.exe.
+          Keep the _internal directory next to the EXE. Python is not required.
+          This build is unsigned. PTA and AI credentials must be entered in the app.
+          '@ | Set-Content dist/PTA-Assistant/WINDOWS-README.txt -Encoding utf8
+          Compress-Archive -Path dist/PTA-Assistant -DestinationPath pta-practice-assistant-v1.2-windows-x86_64.zip
+      - name: Upload verified Windows build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload v1.2 pta-practice-assistant-v1.2-windows-x86_64.zip
+      - name: Keep build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-evidence
+          path: |
+            windows-gui.png
+            build/PTA-Assistant/warn-PTA-Assistant.txt
+          if-no-files-found: ignore
